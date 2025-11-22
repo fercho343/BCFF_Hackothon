@@ -33,7 +33,8 @@ export default function LandingPage() {
     try {
       // Check if Supabase is properly configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      const isConfigured = Boolean(supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co' && supabaseKey !== 'placeholder-key')
 
       if (!isConfigured) {
         // Mock authentication for development
