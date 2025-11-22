@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
 import { User, Lock, Mail, Eye, EyeOff } from 'lucide-react'
 import Avatar3D from '@/components/Avatar3D'
+import { mockUser } from '@/lib/mockData'
 
 export default function LandingPage() {
   const navigate = useNavigate()

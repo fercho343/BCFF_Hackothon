@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import Avatar3D from '@/components/Avatar3D'
+import '@/lib/chart'
 import { Transaction, AvatarState, Category } from '@/types'
 import { Plus, TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { mockAvatarState, mockCategories, mockTransactions } from '@/lib/mockData'
+import { Doughnut } from 'react-chartjs-2'
+import AvatarHuman3D from '@/components/AvatarHuman3D'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [avatarState, setAvatarState] = useState<AvatarState | null>(null)
+  const [gender, setGender] = useState<'male' | 'female'>('male')
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([])
   const [, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -108,6 +111,10 @@ export default function Dashboard() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your financial avatar...</p>
         </div>
+        {/* Spending Overview */}
+        <div className="mt-8 grid md:grid-cols-3 gap-6">
+          <SpendingOverview transactions={recentTransactions} />
+        </div>
       </div>
     )
   }
@@ -139,15 +146,43 @@ export default function Dashboard() {
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Financial Avatar</h2>
               {avatarState && (
-                <Avatar3D
+                <AvatarHuman3D
                   fitnessLevel={avatarState.fitness_level}
                   weightLevel={avatarState.weight_level}
                   stressLevel={avatarState.stress_level}
                   happinessLevel={avatarState.happiness_level}
                   bodyType={avatarState.body_type}
-                  gender="male"
+                  gender={gender}
                 />
               )}
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">Gender</span>
+                  <div className="inline-flex rounded-lg overflow-hidden border">
+                    <button
+                      className={`px-3 py-1 text-sm ${gender === 'male' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700'}`}
+                      onClick={() => setGender('male')}
+                    >
+                      Male
+                    </button>
+                    <button
+                      className={`px-3 py-1 text-sm ${gender === 'female' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700'}`}
+                      onClick={() => setGender('female')}
+                    >
+                      Female
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="h-2 w-32 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500"
+                      style={{ width: `${Math.round(((avatarState?.fitness_level ?? 0) * 100))}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-600">Fitness</span>
+                </div>
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-green-50 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">
@@ -160,6 +195,18 @@ export default function Dashboard() {
                     ${getTotalSpending().toFixed(2)}
                   </div>
                   <div className="text-sm text-gray-600">This Month</div>
+                </div>
+                <div className="text-center p-3 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {Math.round((avatarState?.stress_level || 0) * 100)}%
+                  </div>
+                  <div className="text-sm text-gray-600">Stress</div>
+                </div>
+                <div className="text-center p-3 bg-emerald-50 rounded-lg">
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {Math.round((avatarState?.happiness_level || 0) * 100)}%
+                  </div>
+                  <div className="text-sm text-gray-600">Happiness</div>
                 </div>
               </div>
             </div>
@@ -268,6 +315,43 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+    </div>
+  )
+}
+
+function SpendingOverview({ transactions }: { transactions: Transaction[] }) {
+  const categoryTotals = transactions.reduce<Record<string, number>>((acc, t) => {
+    const key = t.category?.name || 'Uncategorized'
+    acc[key] = (acc[key] || 0) + (t.transaction_type === 'expense' ? t.amount : 0)
+    return acc
+  }, {})
+
+  const topEntries = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+
+  const data = {
+    labels: topEntries.map(([name]) => name),
+    datasets: [
+      {
+        data: topEntries.map(([, total]) => total),
+        backgroundColor: ['#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
+      }
+    ]
+  }
+
+  return (
+    <div className="md:col-span-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Spending Categories</h3>
+      {topEntries.length === 0 ? (
+        <p className="text-gray-500 text-sm">No data available</p>
+      ) : (
+        <div className="flex items-center justify-center">
+          <div className="w-64 h-64">
+            <Doughnut data={data} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
