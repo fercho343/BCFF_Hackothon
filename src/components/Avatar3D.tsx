@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 interface AvatarProps {
   fitnessLevel: number
@@ -11,6 +11,20 @@ interface AvatarProps {
 
 export default function Avatar3D({ fitnessLevel, weightLevel, stressLevel, happinessLevel }: AvatarProps) {
   const [isClient, setIsClient] = useState(false)
+  const healthPercent = useMemo(() => {
+    const v = ((fitnessLevel + happinessLevel - stressLevel) / 3) * 100
+    return Math.max(0, Math.min(100, Math.round(v)))
+  }, [fitnessLevel, happinessLevel, stressLevel])
+  const isHealthy = healthPercent >= 50
+  const bodyScale = useMemo(() => {
+    const base = 1
+    return base + (weightLevel - 0.5) * 0.6
+  }, [weightLevel])
+  const bodyColor = isHealthy ? '#10B981' : '#EF4444'
+  const headBorder = useMemo(() => {
+    const intensity = Math.round(stressLevel * 255)
+    return `rgb(${intensity}, ${255 - intensity}, 0)`
+  }, [stressLevel])
 
   useEffect(() => {
     setIsClient(true)
@@ -27,104 +41,94 @@ export default function Avatar3D({ fitnessLevel, weightLevel, stressLevel, happi
     )
   }
 
-  // Simple 2D avatar representation for now
-  const getBodySize = () => {
-    const baseSize = 150
-    const weightAdjustment = (weightLevel - 0.5) * 60
-    return baseSize + weightAdjustment
-  }
-
-  const getFitnessColor = () => {
-    if (fitnessLevel > 0.7) return 'bg-green-500'
-    if (fitnessLevel > 0.4) return 'bg-yellow-500'
-    return 'bg-red-500'
-  }
-
-  const getHappinessEmoji = () => {
-    if (happinessLevel > 0.7) return '😊'
-    if (happinessLevel > 0.4) return '😐'
-    return '😞'
-  }
-
-  const getStressColor = () => {
-    const intensity = Math.round(stressLevel * 255)
-    return `rgb(${intensity}, ${255 - intensity}, 0)`
-  }
-
   return (
-    <div className="w-full h-96 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg flex items-center justify-center relative overflow-hidden">
-      {/* Background effects */}
+    <div className="w-full h-96 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20"></div>
-      
-      {/* Avatar Container */}
-      <div className="relative z-10 text-center">
-        {/* Head */}
-        <div className="mx-auto mb-4">
-          <div 
-            className="rounded-full bg-gradient-to-br from-yellow-200 to-yellow-300 mx-auto flex items-center justify-center text-4xl shadow-lg"
-            style={{ 
-              width: `${getBodySize() * 0.4}px`, 
-              height: `${getBodySize() * 0.4}px`,
-              border: `3px solid ${getStressColor()}`
-            }}
-          >
-            {getHappinessEmoji()}
-          </div>
-        </div>
-
-        {/* Body */}
-        <div 
-          className={`${getFitnessColor()} rounded-lg mx-auto shadow-lg transition-all duration-500`}
-          style={{ 
-            width: `${getBodySize()}px`, 
-            height: `${getBodySize() * 1.2}px`,
-            opacity: 0.8 + (fitnessLevel * 0.2)
-          }}
-        >
-          {/* Fitness indicator */}
-          <div className="h-full flex items-center justify-center">
-            <div className="text-white font-bold text-lg">
-              {fitnessLevel > 0.7 ? '💪' : fitnessLevel > 0.4 ? '✋' : '😴'}
-            </div>
-          </div>
-        </div>
-
-        {/* Health Status */}
-        <div className="mt-4 space-y-2">
-          <div className="flex justify-center space-x-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span>Fitness: {Math.round(fitnessLevel * 100)}%</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>Weight: {Math.round(weightLevel * 100)}%</span>
-            </div>
-          </div>
-          <div className="flex justify-center space-x-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span>Stress: {Math.round(stressLevel * 100)}%</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span>Happiness: {Math.round(happinessLevel * 100)}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Floating indicators */}
       <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm rounded-lg p-3">
         <p className="text-xs font-medium text-gray-700">Financial Health</p>
-        <p className="text-lg font-bold text-green-600">
-          {Math.round(((fitnessLevel + happinessLevel - stressLevel) / 3) * 100)}%
-        </p>
+        <p className={isHealthy ? 'text-lg font-bold text-emerald-600' : 'text-lg font-bold text-red-600'}>{healthPercent}%</p>
       </div>
-
-      {/* Decorative elements */}
       <div className="absolute bottom-4 left-4 bg-white/60 backdrop-blur-sm rounded-lg p-2">
         <p className="text-xs text-gray-600">Your spending shapes your avatar</p>
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center" style={{ perspective: '800px' }}>
+        <div
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isHealthy ? 'rotateX(10deg) translateZ(40px)' : 'rotateX(25deg) translateZ(10px)',
+          }}
+        >
+          <div
+            style={{
+              width: `${0.35 * 150 * bodyScale}px`,
+              height: `${0.35 * 150 * bodyScale}px`,
+              borderRadius: '50%',
+              background: '#fde68a',
+              border: `3px solid ${headBorder}`,
+              boxShadow: isHealthy ? '0 10px 20px rgba(16,185,129,0.3)' : '0 10px 20px rgba(239,68,68,0.3)',
+              transform: 'translateZ(60px) translateY(-20px)'
+            }}
+          />
+          <div
+            style={{
+              width: `${0.9 * bodyScale * 80}px`,
+              height: `${1.6 * bodyScale * 80}px`,
+              borderRadius: '12px',
+              background: bodyColor,
+              opacity: isHealthy ? 0.95 : 0.85,
+              boxShadow: isHealthy ? '0 20px 40px rgba(16,185,129,0.25)' : '0 20px 40px rgba(239,68,68,0.25)',
+              transform: isHealthy ? 'translateZ(40px)' : 'rotateZ(6deg) translateZ(20px)'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: `${0.09 * bodyScale * 80}px`,
+              height: `${1.1 * bodyScale * 80}px`,
+              left: `-${0.6 * bodyScale * 80}px`,
+              top: '40px',
+              borderRadius: '8px',
+              background: bodyColor,
+              transform: isHealthy ? 'rotateZ(6deg) translateZ(25px)' : 'rotateZ(35deg) translateZ(15px)'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: `${0.09 * bodyScale * 80}px`,
+              height: `${1.1 * bodyScale * 80}px`,
+              left: `${0.6 * bodyScale * 80}px`,
+              top: '40px',
+              borderRadius: '8px',
+              background: bodyColor,
+              transform: isHealthy ? 'rotateZ(-6deg) translateZ(25px)' : 'rotateZ(-35deg) translateZ(15px)'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: `${0.11 * bodyScale * 80}px`,
+              height: `${1.4 * bodyScale * 80}px`,
+              left: `-${0.25 * bodyScale * 80}px`,
+              top: `${1.6 * bodyScale * 80}px`,
+              borderRadius: '10px',
+              background: isHealthy ? '#065f46' : '#7f1d1d',
+              transform: 'translateZ(5px)'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              width: `${0.11 * bodyScale * 80}px`,
+              height: `${1.4 * bodyScale * 80}px`,
+              left: `${0.25 * bodyScale * 80}px`,
+              top: `${1.6 * bodyScale * 80}px`,
+              borderRadius: '10px',
+              background: isHealthy ? '#065f46' : '#7f1d1d',
+              transform: 'translateZ(5px)'
+            }}
+          />
+        </div>
       </div>
     </div>
   )
