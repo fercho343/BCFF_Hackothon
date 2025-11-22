@@ -3,14 +3,14 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import '@/lib/chart'
 import { Transaction, AvatarState, Category } from '@/types'
-import { Plus, TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, DollarSign, Target, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { mockAvatarState, mockCategories, mockTransactions } from '@/lib/mockData'
 import { Doughnut } from 'react-chartjs-2'
 import AvatarHuman3D from '@/components/AvatarHuman3D'
 
 export default function Dashboard() {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const [avatarState, setAvatarState] = useState<AvatarState | null>(null)
   const [gender, setGender] = useState<'male' | 'female'>('male')
@@ -104,6 +104,28 @@ export default function Dashboard() {
     )
   }
 
+  const handleLogout = async () => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+
+      if (isConfigured) {
+        const { error } = await supabase.auth.signOut()
+        if (error) throw error
+      }
+
+      logout()
+      // Use the toast function from sonner
+      const { toast } = await import('sonner')
+      toast.success('Logged out successfully!')
+      navigate('/')
+    } catch (error) {
+      console.error('Error during logout:', error)
+      const { toast } = await import('sonner')
+      toast.error('Failed to log out')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -133,6 +155,14 @@ export default function Dashboard() {
                 className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center hover:bg-purple-700"
               >
                 {user?.full_name?.charAt(0).toUpperCase()}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="text-sm">Logout</span>
               </button>
             </div>
           </div>

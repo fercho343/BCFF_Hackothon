@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import LandingPage from '@/pages/LandingPage'
 import Dashboard from '@/pages/Dashboard'
@@ -10,59 +10,48 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { useAuthStore } from '@/stores/authStore'
 import { useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
 
-// Check if we're in development mode without proper Supabase setup
-const isSupabaseConfigured = () => {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-  return url && url !== 'https://placeholder.supabase.co' && key && key !== 'placeholder-key'
+// Loading component
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading your session...</p>
+      </div>
+    </div>
+  )
 }
 
 export default function App() {
-  const { setUser, user } = useAuthStore()
-  const isConfigured = isSupabaseConfigured()
+  const { initializeSession, isLoading, sessionChecked, isAuthenticated } = useAuthStore()
 
   useEffect(() => {
-    if (!isConfigured) {
-      // Mock authentication for development
-      console.log('Running in mock mode - Supabase not configured')
-      return
-    }
+    // Initialize session on app mount
+    initializeSession()
+  }, [initializeSession])
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          full_name: session.user.user_metadata?.full_name || session.user.email!
-        })
-      }
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          full_name: session.user.user_metadata?.full_name || session.user.email!
-        })
-      } else {
-        setUser(null)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [setUser, isConfigured])
+  // Show loading screen while checking session
+  if (isLoading || !sessionChecked) {
+    return (
+      <>
+        <LoadingScreen />
+        <Toaster position="top-right" />
+      </>
+    )
+  }
 
   return (
     <>
       <Router>
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route 
+              path="/" 
+              element={
+                isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />
+              } 
+            />
             <Route
               path="/dashboard"
               element={

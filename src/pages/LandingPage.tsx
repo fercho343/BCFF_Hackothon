@@ -1,15 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
-import { User, Lock, Mail, Eye, EyeOff } from 'lucide-react'
+import { User, Lock, Mail, Eye, EyeOff, LogOut } from 'lucide-react'
 import Avatar3D from '@/components/Avatar3D'
 import { mockUser } from '@/lib/mockData'
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  const { setUser } = useAuthStore()
+  const { setUser, user, isAuthenticated } = useAuthStore()
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -18,6 +18,13 @@ export default function LandingPage() {
     password: '',
     fullName: ''
   })
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard')
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,8 +100,32 @@ export default function LandingPage() {
     }))
   }
 
+  // Show loading state while checking authentication
+  if (isAuthenticated === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-blue-50 to-emerald-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking your session...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-blue-50 to-emerald-50">
+      {/* Header with logout button (if somehow user ends up here while authenticated) */}
+      {isAuthenticated && (
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center space-x-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-lg text-purple-600 hover:bg-white transition-colors"
+          >
+            <span>Go to Dashboard</span>
+          </button>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-12">
