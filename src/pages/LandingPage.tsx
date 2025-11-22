@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
 import { User, Lock, Mail, Eye, EyeOff } from 'lucide-react'
 import Avatar3D from '@/components/Avatar3D'
+import { mockUser } from '@/lib/mockData'
 
 export default function LandingPage() {
   const navigate = useNavigate()
@@ -25,7 +26,8 @@ export default function LandingPage() {
     try {
       // Check if Supabase is properly configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      const isConfigured = Boolean(supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co' && supabaseKey !== 'placeholder-key')
 
       if (!isConfigured) {
         // Mock authentication for development
