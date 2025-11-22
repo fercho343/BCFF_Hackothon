@@ -6,6 +6,7 @@ import Transactions from '@/pages/Transactions'
 import Analytics from '@/pages/Analytics'
 import Profile from '@/pages/Profile'
 import Settings from '@/pages/Settings'
+import AIPage from '@/pages/AIPage'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import { useAuthStore } from '@/stores/authStore'
@@ -89,6 +90,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ai-assistant"
+              element={
+                <ProtectedRoute>
+                  <AIPage />
                 </ProtectedRoute>
               }
             />

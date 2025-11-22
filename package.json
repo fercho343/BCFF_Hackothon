@@ -11,6 +11,7 @@
     "check": "tsc -b --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@react-three/drei": "9.92.7",
     "@react-three/fiber": "8.15.17",
     "@supabase/supabase-js": "^2.84.0",

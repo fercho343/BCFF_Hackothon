@@ -3,11 +3,14 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import '@/lib/chart'
 import { Transaction, AvatarState, Category } from '@/types'
-import { Plus, TrendingUp, TrendingDown, DollarSign, Target, LogOut } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, DollarSign, Target, LogOut, Brain } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { mockAvatarState, mockCategories, mockTransactions } from '@/lib/mockData'
-import { Doughnut } from 'react-chartjs-2'
 import AvatarHuman3D from '@/components/AvatarHuman3D'
+import { VoiceAssistantRealTime } from '@/components/VoiceAssistantRealTime'
+import { AIRecommendationsEnhanced } from '@/components/AIRecommendationsEnhanced'
+import { HabitTracker } from '@/components/HabitTracker'
+import { toast } from 'sonner'
 
 export default function Dashboard() {
   const { user, logout } = useAuthStore()
@@ -24,11 +27,13 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('Fetching dashboard data...')
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co'
 
       if (!isConfigured) {
+        console.log('Using mock data for development')
         // Use mock data for development
         setAvatarState(mockAvatarState)
         setRecentTransactions(mockTransactions)
@@ -74,34 +79,52 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      console.error('Error details:', error.message, error.stack)
       // Fallback to mock data on error
       setAvatarState(mockAvatarState)
       setRecentTransactions(mockTransactions)
       setCategories(mockCategories)
+      toast.error('Failed to load dashboard data. Using sample data.')
     } finally {
       setLoading(false)
     }
   }
 
   const getTotalSpending = () => {
-    const currentMonth = new Date().getMonth()
-    const currentYear = new Date().getFullYear()
-    
-    return recentTransactions
-      .filter(t => {
-        const transactionDate = new Date(t.transaction_date)
-        return transactionDate.getMonth() === currentMonth && 
-               transactionDate.getFullYear() === currentYear &&
-               t.transaction_type === 'expense'
-      })
-      .reduce((sum, t) => sum + t.amount, 0)
+    try {
+      const currentMonth = new Date().getMonth()
+      const currentYear = new Date().getFullYear()
+      
+      if (!recentTransactions || recentTransactions.length === 0) {
+        return 0
+      }
+      
+      return recentTransactions
+        .filter(t => {
+          if (!t.transaction_date || !t.amount) return false
+          const transactionDate = new Date(t.transaction_date)
+          return transactionDate.getMonth() === currentMonth && 
+                 transactionDate.getFullYear() === currentYear &&
+                 t.transaction_type === 'expense'
+        })
+        .reduce((sum, t) => sum + (t.amount || 0), 0)
+    } catch (error) {
+      console.error('Error calculating total spending:', error)
+      return 0
+    }
   }
 
   const getFinancialHealthScore = () => {
     if (!avatarState) return 0
-    return Math.round(
-      (avatarState.fitness_level + avatarState.happiness_level - avatarState.stress_level) * 100 / 3
-    )
+    try {
+      const score = Math.round(
+        (avatarState.fitness_level + avatarState.happiness_level - avatarState.stress_level) * 100 / 3
+      )
+      return Math.max(0, Math.min(100, score)) // Ensure score is between 0-100
+    } catch (error) {
+      console.error('Error calculating financial health score:', error)
+      return 0
+    }
   }
 
   const handleLogout = async () => {
@@ -115,27 +138,20 @@ export default function Dashboard() {
       }
 
       logout()
-      // Use the toast function from sonner
-      const { toast } = await import('sonner')
       toast.success('Logged out successfully!')
       navigate('/')
     } catch (error) {
       console.error('Error during logout:', error)
-      const { toast } = await import('sonner')
       toast.error('Failed to log out')
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your financial avatar...</p>
-        </div>
-        {/* Spending Overview */}
-        <div className="mt-8 grid md:grid-cols-3 gap-6">
-          <SpendingOverview transactions={recentTransactions} />
         </div>
       </div>
     )
@@ -175,15 +191,22 @@ export default function Dashboard() {
           <div className="lg:col-span-2">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Your Financial Avatar</h2>
-              {avatarState && (
+              {avatarState ? (
                 <AvatarHuman3D
-                  fitnessLevel={avatarState.fitness_level}
-                  weightLevel={avatarState.weight_level}
-                  stressLevel={avatarState.stress_level}
-                  happinessLevel={avatarState.happiness_level}
-                  bodyType={avatarState.body_type}
+                  fitnessLevel={avatarState.fitness_level || 0.5}
+                  weightLevel={avatarState.weight_level || 0.5}
+                  stressLevel={avatarState.stress_level || 0.5}
+                  happinessLevel={avatarState.happiness_level || 0.5}
+                  bodyType={avatarState.body_type || 'average'}
                   gender={gender}
                 />
+              ) : (
+                <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading avatar...</p>
+                  </div>
+                </div>
               )}
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -204,14 +227,14 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="h-2 w-32 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500"
-                      style={{ width: `${Math.round(((avatarState?.fitness_level ?? 0) * 100))}%` }}
-                    />
+                    <div className="h-2 w-32 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-green-500"
+                        style={{ width: `${Math.round(((avatarState?.fitness_level ?? 0.5) * 100))}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-600">Fitness</span>
                   </div>
-                  <span className="text-xs text-gray-600">Fitness</span>
-                </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -273,7 +296,7 @@ export default function Dashboard() {
                   <p className="text-gray-500 text-center py-4">No transactions yet</p>
                 ) : (
                   recentTransactions.map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={transaction.id || transaction.description} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                           transaction.transaction_type === 'income' ? 'bg-green-100' : 'bg-red-100'
@@ -285,7 +308,7 @@ export default function Dashboard() {
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-800">{transaction.description}</p>
+                          <p className="font-medium text-gray-800">{transaction.description || 'No description'}</p>
                           <p className="text-sm text-gray-500">
                             {transaction.category?.name || 'Uncategorized'}
                           </p>
@@ -295,10 +318,10 @@ export default function Dashboard() {
                         <p className={`font-semibold ${
                           transaction.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'
                         }`}>
-                          {transaction.transaction_type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                          {transaction.transaction_type === 'income' ? '+' : '-'}${(transaction.amount || 0).toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(transaction.transaction_date).toLocaleDateString()}
+                          {transaction.transaction_date ? new Date(transaction.transaction_date).toLocaleDateString() : 'No date'}
                         </p>
                       </div>
                     </div>
@@ -307,6 +330,26 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* AI Features Section */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-2 gap-8 mb-8">
+          <VoiceAssistantRealTime 
+            onTranscriptComplete={(transcript, analysis) => {
+              // Handle voice commands that create habits
+              if (analysis.intent === 'expense' && analysis.extractedData?.amount) {
+                // Could integrate with habit tracker here
+                toast.success(`Voice command processed: ${transcript}`);
+              }
+            }}
+          />
+          <AIRecommendationsEnhanced />
+        </div>
+        
+        <div className="mb-8">
+          <HabitTracker />
         </div>
       </div>
 
@@ -342,6 +385,13 @@ export default function Dashboard() {
               <Target className="h-6 w-6" />
               <span className="text-xs">Profile</span>
             </button>
+            <button
+              onClick={() => navigate('/ai-assistant')}
+              className="flex flex-col items-center space-y-1 text-gray-600 hover:text-purple-600"
+            >
+              <Brain className="h-6 w-6" />
+              <span className="text-xs">AI</span>
+            </button>
           </div>
         </div>
       </nav>
@@ -349,39 +399,4 @@ export default function Dashboard() {
   )
 }
 
-function SpendingOverview({ transactions }: { transactions: Transaction[] }) {
-  const categoryTotals = transactions.reduce<Record<string, number>>((acc, t) => {
-    const key = t.category?.name || 'Uncategorized'
-    acc[key] = (acc[key] || 0) + (t.transaction_type === 'expense' ? t.amount : 0)
-    return acc
-  }, {})
 
-  const topEntries = Object.entries(categoryTotals)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-
-  const data = {
-    labels: topEntries.map(([name]) => name),
-    datasets: [
-      {
-        data: topEntries.map(([, total]) => total),
-        backgroundColor: ['#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4']
-      }
-    ]
-  }
-
-  return (
-    <div className="md:col-span-1 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Top Spending Categories</h3>
-      {topEntries.length === 0 ? (
-        <p className="text-gray-500 text-sm">No data available</p>
-      ) : (
-        <div className="flex items-center justify-center">
-          <div className="w-64 h-64">
-            <Doughnut data={data} />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
